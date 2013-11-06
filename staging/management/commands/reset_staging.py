@@ -8,8 +8,7 @@ import os
 class Command(BaseCommand):
     requires_model_validation = True
     option_list = BaseCommand.option_list + (
-        make_option('--env', '-e', dest='env',
-            help='enviroment'),
+        make_option('--env', '-e', dest='env', help='enviroment'),
     )
 
     def handle(self, *args, **options):
@@ -31,4 +30,4 @@ class Command(BaseCommand):
             if kwargs.get('migrate_all'):
                 call_command('migrate', fake=True)
 
-        call_command('load_staging', env=options.get('env'))
+            call_command('load_staging', env=options.get('env'), database=db_key)

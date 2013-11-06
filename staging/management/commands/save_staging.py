@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.core.management import BaseCommand, CommandError
+from django.db import DEFAULT_DB_ALIAS
 from django.db.models import FileField, get_app, get_models, get_model
 from optparse import make_option
 import os
@@ -20,16 +21,22 @@ class Command(BaseCommand):
 
     option_list = BaseCommand.option_list + (
         make_option('--env', '-e', dest='env', help='enviroment'),
+        make_option('--database', action='store', dest='database',
+                    default=DEFAULT_DB_ALIAS,
+                    help='What datrabase user for'),
     )
 
     def handle(self, *app_labels, **options):
         if not settings.FIXTURE_DIRS:
-            raise CommandError('Add fixtures folder for project root to FIXTURE_DIRS for saving apps not from project')
+            raise CommandError('Add fixtures folder for project root to '
+                               'FIXTURE_DIRS for saving apps not from project')
 
         if options.get('env'):
             env_prefix = options.get('env') + '_'
         else:
             env_prefix = ''
+
+        database_option = '--database={0}'.format(options.get('database'))
 
         for app_label in app_labels:
             try:
@@ -49,7 +56,7 @@ class Command(BaseCommand):
             for model in models:
                 meta = model._meta
                 model_name = '%s.%s' % (meta.app_label, meta.object_name)
-                
+
                 if not model.objects.exists():
                     continue
 
@@ -59,8 +66,11 @@ class Command(BaseCommand):
                                                              meta.object_name.lower())
                 self.move_files(model)
                 print 'saving %s' % model_name
-                subprocess.call(['python', 'manage.py', 'dumpdata', model_name, '--indent=2'],
-                                stdout=open(fixtures_path, 'w'))
+                subprocess.call([
+                    'env', 'python', 'manage.py', 'dumpdata', model_name,
+                    '--indent=2',
+                    database_option,
+                ], stdout=open(fixtures_path, 'w'))
 
     def move_files(self, model):
         meta = model._meta

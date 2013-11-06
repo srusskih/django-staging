@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.core.management import call_command
 from django.core.management.base import BaseCommand
+from django.db import DEFAULT_DB_ALIAS
 from django.db.models.loading import get_apps
 from optparse import make_option
 from staging.signals import on_load_staging
@@ -15,17 +16,19 @@ class Command(BaseCommand):
         u'so you can overwride some data.')
 
     option_list = BaseCommand.option_list + (
-        make_option('--env', '-e', dest='env',
-            help='enviroment'),
+        make_option('--env', '-e', dest='env', help='enviroment'),
+        make_option('--database', action='store', dest='database',
+                    default=DEFAULT_DB_ALIAS,
+                    help='What database should be user for'),
     )
 
-    def handle(self, *args, **kwargs):
+    def handle(self, *args, **options):
         if settings.DATABASES['default']['ENGINE'] != 'django.db.backends.sqlite3':
             if raw_input('Database engine is not SQLite. Do you wish load staging data? [y/N]') != 'y':
                 return
 
-        env = kwargs.get('env')
-        options = kwargs.get('options', {})
+        env = options.pop('env', None)
+        options = options
 
         app_module_paths = []
         for app in get_apps():
